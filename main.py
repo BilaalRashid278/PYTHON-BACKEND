@@ -1,12 +1,10 @@
 from fastapi import FastAPI,Depends,HTTPException
-from fastapi.requests import Request
 from sqlalchemy import create_engine
 from settings import DEBUG,DATABASE_URL
 from models.model import Todo
 from sqlmodel import SQLModel,Session,select
 from typing import Annotated
 import uvicorn
-from contextlib import asynccontextmanager
 
 
 # connect application with postgresql database
@@ -58,13 +56,23 @@ async def update_todo(todo : Todo,session : Annotated[Session,Depends(get_sessio
         existing_todo.is_complete = todo.is_complete
         session.add(existing_todo)
         session.commit()
-        session.refresh()
+        session.refresh(existing_todo)
         return existing_todo
     else :
       raise HTTPException(status_code=404,detail='Task Not Found')
+    
+@app.delete('/todo/delete/{id}',response_model=dict)
+async def deleteTodo(id : int,session : Annotated[Session,Depends(get_session)]):
+    deleteTodo = session.exec(select(Todo).where(Todo.id == id))
+    if deleteTodo:
+        session.delete(deleteTodo.one())
+        session.commit()
+        return {'message' : 'Task Sussessfully Deleted'}
+    else:
+        raise HTTPException(status_code=404,detail='Task Not Found')
 
 
 if __name__ == '__main__':
-    uvicorn.run("main:app", host='localhost', port=3000, reload=True, workers=1)
+    uvicorn.run("main:app", host='localhost', port=4400, reload=True, workers=1)
 
 

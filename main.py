@@ -1,25 +1,21 @@
 from fastapi import FastAPI,Depends,HTTPException
-from sqlalchemy import create_engine
-from settings import DEBUG,DATABASE_URL
+from settings import DEBUG
 from models.model import Todo
-from sqlmodel import SQLModel,Session,select
+from sqlmodel import Session,select
+from db.db import get_session,create_tables
 from typing import Annotated
+from router.user import user_router
 import uvicorn
 
-
-# connect application with postgresql database
-connection_string : str = str(DATABASE_URL)
-engine = create_engine(connection_string,echo=True)
-
-
-# Create All Table like model is a table 
-SQLModel.metadata.create_all(engine)
-
-def get_session():
-    with Session(engine) as session:
-        yield session
-
 app = FastAPI(debug=DEBUG,title='Todo Application')
+
+app.include_router(router=user_router)
+
+create_tables()
+
+@app.post('/login')
+async def login():
+    ...
 
 
 @app.post('/todo/new',response_model=Todo)

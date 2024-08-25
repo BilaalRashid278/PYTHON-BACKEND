@@ -9,6 +9,7 @@ greenlet          3.0.3
 h11               0.14.0
 idna              3.7
 pip               24.2
+psycopg2          2.9.9
 pydantic          2.8.2
 pydantic_core     2.20.1
 python-multipart  0.0.9

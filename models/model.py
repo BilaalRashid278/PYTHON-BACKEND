@@ -1,7 +1,7 @@
 from fastapi import Form
 from sqlmodel import SQLModel,Field
 from typing import Annotated
-from fastapi.security import OAuth2PasswordRequestForm
+#from fastapi.security import OAuth2PasswordRequestForm
 from pydantic import BaseModel
 
 class Todo(SQLModel,table=True):
@@ -22,3 +22,13 @@ class RegisterUser (BaseModel):
     username : Annotated[str,Form()]
     email : Annotated[str,Form()]
     password : Annotated[str,Form(min_length=8)]
+
+
+
+class Token(BaseModel):
+    access_token : str
+    token_type : str
+
+
+class TokenData(BaseModel):
+     username : str

@@ -1,11 +1,16 @@
-from fastapi import FastAPI,Depends,HTTPException
+from fastapi import FastAPI,Depends,HTTPException,status
+from fastapi.security import OAuth2PasswordRequestForm
 from settings import DEBUG
-from models.model import Todo
+from models.model import Todo,Token,TokenData,User
 from sqlmodel import Session,select
 from db.db import get_session,create_tables
 from typing import Annotated
 from router.user import user_router
 import uvicorn
+from auth.auth import authenticate_user,create_access_token,EXPIRY_TIME,oauth_scheme,SECRET_KEY,ALGORITHM,get_user_from_db
+from datetime import timedelta
+from jose import jwt,JWTError
+
 
 app = FastAPI(debug=DEBUG,title='Todo Application')
 
@@ -13,13 +18,34 @@ app.include_router(router=user_router)
 
 create_tables()
 
-@app.post('/login')
-async def login():
-    ...
+def currentUser(token : Annotated[str,Depends(oauth_scheme)],session : Annotated[Session,Depends(get_session)]):
+    credential_exception = HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,detail="Invalid Token",headers={'www-Authenticate' : 'Bearer'})
+    try:
+        payload = jwt.decode(token,SECRET_KEY,algorithms=ALGORITHM)
+        username : str | None = payload.get('sub')
+        if username is None:
+            return credential_exception
+        token_data = TokenData(username=username)
+    except:
+        raise JWTError
+    user = get_user_from_db(session,username=token_data.username)
+    if not user:
+        raise credential_exception
+    return user
+
+
+@app.post('/token',response_model=Token)
+async def login(login_data : Annotated[OAuth2PasswordRequestForm,Depends()],session : Annotated[Session,Depends(get_session)]):
+    user = await authenticate_user(login_data.username, login_data.password, session)
+    if not user:
+        raise HTTPException(status_code=404,detail="Invalid username or password")
+    expiry_time = timedelta(minutes=EXPIRY_TIME)
+    access_token = create_access_token({"sub" : login_data.username},expiry_time)
+    return Token(access_token=access_token,token_type="bearer")
 
 
 @app.post('/todo/new',response_model=Todo)
-async def Work(todo: Todo,session : Annotated[Session,Depends(get_session)]):
+async def Work(currentUser : Annotated[User,Depends(currentUser)],todo: Todo,session : Annotated[Session,Depends(get_session)]):
     try:
         session.add(todo)
         session.commit()

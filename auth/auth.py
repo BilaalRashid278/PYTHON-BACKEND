@@ -5,8 +5,8 @@ from sqlmodel import Session,select
 from fastapi import Depends
 from db.db import get_session
 from models.model import User
-from jose import jwt,JWTError
-from datetime import datetime,timezone,timedelta
+from jose import jwt, JWTError
+from datetime import datetime, timezone, timedelta
 
 SECRET_KEY = "7832KJKLSDJFL23842937498237DNSDFKJSKF=SDFKJHSDFHS"
 ALGORITHM = "HS256"
@@ -23,7 +23,7 @@ def hash_password(password):
 def verify_password(password,hash_password):
     return pwd_context.verify(password,hash_password)
 
-def get_user_from_db(session : Annotated[Session,Depends(get_session)],username : str,email: str):
+def get_user_from_db(session : Annotated[Session,Depends(get_session)],username : str,email: str | None):
    user = session.exec(select(User).where(User.username == username)).first()
    if not user:
        user = session.exec(select(User).where(User.email == email)).first()

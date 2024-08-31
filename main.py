@@ -1,7 +1,7 @@
 from fastapi import FastAPI,Depends,HTTPException,status
 from fastapi.security import OAuth2PasswordRequestForm
 from settings import DEBUG
-from models.model import Todo,Token,TokenData,User
+from models.model import Todo,Token,TokenData,User, TodoSub
 from sqlmodel import Session,select
 from db.db import get_session,create_tables
 from typing import Annotated
@@ -28,7 +28,7 @@ def currentUser(token : Annotated[str,Depends(oauth_scheme)],session : Annotated
         token_data = TokenData(username=username)
     except:
         raise JWTError
-    user = get_user_from_db(session,username=token_data.username)
+    user = get_user_from_db(session, token_data.username, None)
     if not user:
         raise credential_exception
     return user
@@ -45,19 +45,20 @@ async def login(login_data : Annotated[OAuth2PasswordRequestForm,Depends()],sess
 
 
 @app.post('/todo/new',response_model=Todo)
-async def Work(currentUser : Annotated[User,Depends(currentUser)],todo: Todo,session : Annotated[Session,Depends(get_session)]):
+async def Work(currentUser : Annotated[User,Depends(currentUser)],todo: TodoSub,session : Annotated[Session,Depends(get_session)]):
     try:
-        session.add(todo)
+        newTodo = Todo(content=todo.content, is_complete=todo.is_complete, user_id=currentUser.id)
+        session.add(newTodo)
         session.commit()
-        session.refresh(todo)  
-        return todo
+        session.refresh(newTodo)
+        return newTodo
     except :
         return {'message' : 'Todo not Added'}
     
 
 @app.get('/todos',response_model=list[Todo])
-async def get_todos(session : Annotated[Session,Depends(get_session)]):
-    todos = session.exec(select(Todo)).all()
+async def get_todos(session : Annotated[Session,Depends(get_session)],currentUser : Annotated[User,Depends(currentUser)]):
+    todos = session.exec(select(Todo).where(Todo.user_id == currentUser.user_id)).all()
     return todos
 
 

@@ -11,6 +11,10 @@ class Todo(SQLModel,table=True):
     is_complete : bool = Field(default=False)
     user_id : int = Field(foreign_key="user.id")
 
+class TodoSub(BaseModel):
+    content: str = Field(index=True,min_length=10,max_length=54)
+    is_complete: bool = Field(default=False)
+
 class User(SQLModel,table=True):
     __tablename__ = 'user'
     id : int | None = Field(default=None,primary_key=True)
